@@ -1,3 +1,49 @@
+name: Generate .env and Clean Up
+
+on:
+  workflow_dispatch: # Запуск вручную, можно добавить другие триггеры (push, pull_request)
+
+jobs:
+  generate-env:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout репозитория
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # 2. Создание .env файла
+    - name: Create .env file
+      run: |
+        cat <<EOF > .env
+        # Application Information
+        VITE_BRAND_NAME=${{ secrets.VITE_BRAND_NAME }}
+        VITE_LOGO_SRC=${{ secrets.VITE_LOGO_SRC }}
+
+        # URLs
+        VITE_PANEL_DOMAIN=${{ secrets.VITE_PANEL_DOMAIN }}
+        VITE_JSON_APPS_URL=${{ secrets.VITE_JSON_APPS_URL }}
+        VITE_SUPPORT_URL=${{ secrets.VITE_SUPPORT_URL }}
+
+        # Feature Toggles
+        VITE_OFF_SECTIONS=${{ secrets.VITE_OFF_SECTIONS }}
+        EOF
+
+    # 3. Проверить содержимое .env (опционально, для отладки)
+    - name: Display .env (Optional)
+      run: cat .env
+
+    # 4. Выполнить команды, которые используют .env
+    - name: Run application (example)
+      run: |
+        echo "Using .env file"
+        # Ваши команды, которые зависят от .env
+        # Например: npm run build или запуск скриптов
+
+    # 5. Удалить .env файл
+    - name: Clean up .env
+      run: rm -f .env
+
 name: Build and Release
 
 on:
@@ -11,10 +57,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
+      # Step 0: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
-
+    
+      # Step 1: Create .env file
+      - name: Install dependencies
+        run: |
+          cat <<EOF > .env
+          # Application Information
+          VITE_BRAND_NAME=${{ vars.VITE_BRAND_NAME }}
+          VITE_LOGO_SRC=${{ vars.VITE_LOGO_SRC }}
+          # URLs
+          VITE_PANEL_DOMAIN=${{ secrets.VITE_PANEL_DOMAIN }}
+          VITE_JSON_APPS_URL=${{ secrets.VITE_JSON_APPS_URL }}
+          VITE_SUPPORT_URL=${{ secrets.VITE_SUPPORT_URL }}
+          # Feature Toggles
+          VITE_OFF_SECTIONS=${{ vars.VITE_OFF_SECTIONS }}
+          EOF
       # Step 2: Set up Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -33,10 +93,14 @@ jobs:
       - name: List build directory
         run: ls -al build/
 
-      # New Step: Upload build artifacts
+      # New 5: Upload build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build-output
           path: build/index.html
           retention-days: 5
+
+      # New 6: delete .env
+      - name:  Clean up .env
+        run: rm -f .env
